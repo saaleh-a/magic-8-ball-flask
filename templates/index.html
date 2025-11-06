@@ -1,20 +1,313 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Magic 8 Ball</title>
-    </head>
-    <body>
-        <h1>Welcome to the Magic 8 Ball game!</h1>
-        <form method="post">
-            <label for="question">Ask me for any advice and I’ll help you out. Type in your question:</label><br><br>
-            <input type="text" id="question" name="question" placeholder="Type your question here"><br><br>
-            <input type="submit" value="Get Answer">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Magic 8 Ball — Oracle Mode</title>
+
+    <!-- All CSS is inline in this file -->
+    <style>
+      :root{
+        --bg-1:#0b0f1a;
+        --bg-2:#111b3a;
+        --bg-3:#1f1147;
+        --card:#0e1324cc;
+        --glass:#10162a99;
+        --text:#e6f0ff;
+        --muted:#a9b3d1;
+        --accent:#8a7bff;
+        --accent-2:#00e1ff;
+        --success:#29ffa3;
+        --warn:#ffd166;
+        --danger:#ff5c8a;
+        --ring: 0 0 0 3px #8a7bff40, 0 0 32px #8a7bff60, inset 0 0 18px #8a7bff30;
+        --shadow: 0 20px 60px #00000080, inset 0 0 0 1px #ffffff10;
+        --radius: 18px;
+      }
+
+      /* ===== Page & background ===== */
+      html,body{
+        height:100%;
+        margin:0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+        color:var(--text);
+        background: radial-gradient(1200px 600px at 10% 10%, #121832, transparent 60%),
+                    radial-gradient(900px 600px at 90% 20%, #1b0f3b, transparent 60%),
+                    radial-gradient(1000px 800px at 40% 100%, #07111f, transparent 60%),
+                    linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
+        background-attachment: fixed;
+        overflow-x:hidden;
+      }
+
+      /* animated nebula */
+      .nebula{
+        position:fixed; inset:-20vmax;
+        background:
+          radial-gradient(closest-side at 20% 30%, #8a7bff22, transparent 60%),
+          radial-gradient(closest-side at 80% 70%, #00e1ff22, transparent 60%),
+          radial-gradient(closest-side at 50% 50%, #ff5c8a1a, transparent 60%);
+        filter: blur(60px) saturate(140%);
+        animation: drift 30s ease-in-out infinite alternate;
+        pointer-events:none;
+        z-index:0;
+      }
+      @keyframes drift{
+        0% { transform: translate3d(-2%, -1%, 0) scale(1); }
+        100%{ transform: translate3d(2%, 1%, 0) scale(1.1); }
+      }
+
+      /* ===== Layout ===== */
+      .wrap{
+        position:relative;
+        z-index:1;
+        min-height:100%;
+        display:grid;
+        place-items:center;
+        padding:6vmin 4vmin;
+      }
+
+      .card{
+        width:min(820px, 92vw);
+        background: linear-gradient(180deg, #0c1226cc, #0a1022cc);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px) saturate(130%);
+        border-radius: var(--radius);
+        border:1px solid #ffffff1a;
+        padding: clamp(20px, 4vmin, 36px);
+        position:relative;
+        overflow:hidden;
+        isolation:isolate;
+      }
+
+      /* subtle animated edge glow */
+      .card::before{
+        content:"";
+        position:absolute; inset:-2px;
+        background: conic-gradient(from 0deg,
+          #8a7bff33, #00e1ff33, #ff5c8a33, #29ffa333, #8a7bff33);
+        filter: blur(24px);
+        z-index:-1;
+        opacity:.65;
+        animation: spin 14s linear infinite;
+      }
+      @keyframes spin{ to{ transform: rotate(360deg); } }
+
+      /* ===== Heading ===== */
+      .title{
+        display:flex; align-items:center; gap:14px;
+        margin:0 0 12px 0;
+        letter-spacing:.5px;
+      }
+      .badge{
+        font-size:12px;
+        padding:6px 10px;
+        border:1px solid #ffffff26;
+        border-radius:999px;
+        background:#0b1023aa;
+        color:var(--muted);
+        text-transform:uppercase;
+        letter-spacing:.12em;
+      }
+      h1{
+        font-size: clamp(28px, 4.4vw, 44px);
+        line-height:1.1;
+        margin:0;
+        background: linear-gradient(90deg, #eaf1ff, #bfc8ff 40%, #a7fff7 80%);
+        -webkit-background-clip:text;
+        background-clip:text;
+        color:transparent;
+        text-shadow: 0 0 18px #8a7bff33;
+      }
+      .subtitle{
+        margin:6px 0 22px 0;
+        color:var(--muted);
+        font-size: clamp(14px, 2.4vw, 16px);
+      }
+
+      /* ===== Orb (the 8-ball) ===== */
+      .orb{
+        --size: clamp(140px, 32vw, 220px);
+        width:var(--size); height:var(--size);
+        margin: 8px auto 18px auto;
+        border-radius:50%;
+        background:
+          radial-gradient(circle at 35% 30%, #ffffff0f, transparent 30%),
+          radial-gradient(circle at 70% 75%, #00000066, transparent 45%),
+          radial-gradient(circle at 50% 50%, #10152c, #0a0f22 70%, #060914);
+        box-shadow:
+          0 18px 60px #000000aa,
+          inset 0 0 30px #8a7bff22,
+          inset 0 0 60px #00e1ff1f;
+        position:relative;
+        display:grid; place-items:center;
+        animation: float 4.5s ease-in-out infinite;
+      }
+      @keyframes float{
+        0%,100%{ transform: translateY(0); }
+        50%    { transform: translateY(-8px); }
+      }
+      .orb::after{
+        /* glowing ring */
+        content:"";
+        position:absolute; inset:-10px;
+        border-radius:inherit;
+        background: radial-gradient(closest-side, #8a7bff33, transparent 60%);
+        filter: blur(14px);
+        opacity:.7;
+        z-index:-1;
+      }
+      .orb-core{
+        width:52%;
+        aspect-ratio:1/1;
+        border-radius:50%;
+        background: radial-gradient(circle at 50% 55%, #202bff, #5df9ff 40%, #00e1ff 70%, #00b8ff 100%);
+        filter: saturate(120%);
+        box-shadow:
+          inset 0 0 30px #00000080,
+          0 0 36px #00e1ff66,
+          0 0 80px #00e1ff33;
+        display:grid; place-items:center;
+        position:relative;
+      }
+      .orb-core::before{
+        content:"8";
+        font-weight:800;
+        font-size: clamp(42px, 9vw, 64px);
+        color:#eaf4ff;
+        text-shadow: 0 2px 12px #001b2a;
+        mix-blend-mode: screen;
+      }
+
+      /* ===== Form ===== */
+      form{
+        display:flex;
+        flex-wrap:wrap;
+        gap:12px;
+        align-items:stretch;
+        margin-top: 8px;
+      }
+      label{ display:block; width:100%; margin-bottom:6px; color:var(--muted); }
+
+      input[type="text"]{
+        flex:1 1 420px;
+        font-size:16px;
+        line-height:1;
+        padding:16px 18px;
+        border-radius:14px;
+        border:1px solid #2b3556;
+        background: linear-gradient(180deg, #0b132b, #0b1227);
+        color:var(--text);
+        outline:none;
+        box-shadow: inset 0 0 0 1px #ffffff10, inset 0 2px 0 #ffffff08;
+        transition: box-shadow .2s, border-color .2s, transform .06s;
+      }
+      input[type="text"]::placeholder{ color:#7f8bb3; }
+      input[type="text"]:focus{
+        border-color:#8a7bff80;
+        box-shadow: var(--ring);
+        transform: translateY(-1px);
+      }
+
+      input[type="submit"]{
+        flex:0 0 auto;
+        font-size:16px;
+        padding:16px 20px;
+        border-radius:14px;
+        border:1px solid #2b3556;
+        color:#0a0f22;
+        background:
+          radial-gradient(120% 200% at 0% 0%, #00e1ff, transparent 60%),
+          radial-gradient(120% 200% at 100% 100%, #8a7bff, transparent 60%),
+          linear-gradient(90deg, #a7fff7, #bda7ff);
+        cursor:pointer;
+        font-weight:700;
+        letter-spacing:.2px;
+        box-shadow: 0 12px 30px #00e1ff38, inset 0 0 0 1px #ffffff99;
+        transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+      }
+      input[type="submit"]:hover{ filter: brightness(1.05) saturate(1.1); }
+      input[type="submit"]:active{ transform: translateY(1px) scale(.99); }
+
+      /* ===== Answer area ===== */
+      .answer{
+        margin-top: 18px;
+        padding:16px;
+        border-radius:14px;
+        background: linear-gradient(180deg, #0c142caa, #0a1227aa);
+        border:1px solid #ffffff1a;
+        box-shadow: inset 0 0 24px #8a7bff17;
+      }
+      .answer p{ margin:8px 0; }
+
+      /* fancy gradient underline for question */
+      .q{
+        display:inline-block;
+        background:
+          linear-gradient(90deg, #8a7bff, #00e1ff, #ff5c8a);
+        background-size:180% 2px;
+        background-position:0 100%;
+        background-repeat:no-repeat;
+        padding-bottom:2px;
+        animation: underline 3.6s ease-in-out infinite alternate;
+      }
+      @keyframes underline{
+        to{ background-position:100% 100%; }
+      }
+
+      /* ===== Footer ===== */
+      .foot{
+        margin-top:18px;
+        color:#8ea0d0;
+        font-size:12px;
+        text-align:center;
+        opacity:.8;
+      }
+
+      /* Accessibility: prefers-reduced-motion */
+      @media (prefers-reduced-motion: reduce){
+        .nebula, .card::before, .orb, .q{ animation: none !important; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="nebula" aria-hidden="true"></div>
+
+    <div class="wrap">
+      <main class="card" role="main" aria-labelledby="title">
+        <div class="title">
+          <span class="badge">Arcane UI</span>
+          <h1 id="title">Welcome to the Magic 8 Ball</h1>
+        </div>
+        <p class="subtitle">Ask a question. The cosmic bowling ball answers. No refunds.</p>
+
+        <div class="orb" aria-hidden="true">
+          <div class="orb-core"></div>
+        </div>
+
+        <form method="post" novalidate>
+          <label for="question">Ask me for any advice and I’ll help you out. Type in your question:</label>
+          <input
+            type="text"
+            id="question"
+            name="question"
+            placeholder="Will I ace that interview?" 
+            autocomplete="off"
+            inputmode="text"
+            aria-label="Your question"
+          />
+          <input type="submit" value="Get Answer" aria-label="Get Answer">
         </form>
+
         {% if question %}
-            <p>You asked: {{ question }}</p>
-            <p>Shaking... {{ answer }}</p>
+          <div class="answer" role="status" aria-live="polite">
+            <p>You asked: <span class="q">{{ question }}</span></p>
+            <p>Shaking... <strong>{{ answer }}</strong></p>
+          </div>
         {% endif %}
-    </body>
+
+        <div class="foot">Made with chaos, stardust, and questionable life choices.</div>
+      </main>
+    </div>
+  </body>
 </html>
